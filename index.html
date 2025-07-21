@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RealEarningPk - Firebase Version</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f2f2f2; margin: 0; }
+    header { background: #1e88e5; color: white; text-align: center; padding: 1rem; }
+    .container { padding: 20px; max-width: 600px; margin: auto; }
+    .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    input, button { padding: 10px; width: 100%; margin: 10px 0; border-radius: 5px; }
+    button { background: #1e88e5; color: white; border: none; cursor: pointer; }
+    .task-link { text-decoration: none; color: #1e88e5; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RealEarningPk</h1>
+    <p>Earn by watching TikTok videos</p>
+  </header>
+
+  <div class="container">
+    <div id="auth-section">
+      <div class="card">
+        <h2>Register / Login</h2>
+        <input type="email" id="email" placeholder="Email" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="registerUser()">Register</button>
+        <button onclick="loginUser()">Login</button>
+      </div>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+      <div class="card">
+        <h3>Total Earnings: PKR <span id="totalEarnings">0</span></h3>
+      </div>
+      <div class="card">
+        <h3>Today’s Tasks</h3>
+        <a href="https://www.tiktok.com/@mbalam74/video/7523458669682478343" target="_blank" class="task-link">Watch TikTok Video</a>
+        <button onclick="completeTask('task1')">Complete Task 1</button>
+        <button onclick="completeTask('task2')">Complete Task 2</button>
+      </div>
+      <div class="card">
+        <h3>Withdraw</h3>
+        <p>Minimum withdrawal: PKR 210</p>
+        <button onclick="requestWithdraw()">Request Withdrawal</button>
+      </div>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIza....",
+      authDomain: "realearningpk.firebaseapp.com",
+      databaseURL: "https://realearningpk.firebaseio.com",
+      projectId: "realearningpk",
+      storageBucket: "realearningpk.appspot.com",
+      messagingSenderId: "...",
+      appId: "1:...:web:..."
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function registerUser() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => alert("Registered successfully!"))
+        .catch(err => alert(err.message));
+    }
+
+    function loginUser() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById("auth-section").style.display = "none";
+          document.getElementById("dashboard").style.display = "block";
+          loadUserData();
+        })
+        .catch(err => alert(err.message));
+    }
+
+    function logout() {
+      auth.signOut();
+      document.getElementById("dashboard").style.display = "none";
+      document.getElementById("auth-section").style.display = "block";
+    }
+
+    function loadUserData() {
+      const user = auth.currentUser;
+      const uid = user.uid;
+      const today = new Date().toDateString();
+
+      db.ref('users/' + uid).once('value').then(snapshot => {
+        const data = snapshot.val() || { earnings: 0, tasks: {} };
+        document.getElementById("totalEarnings").textContent = data.earnings || 0;
+        window.userData = data;
+        window.userData.today = today;
+      });
+    }
+
+    function completeTask(taskId) {
+      const uid = auth.currentUser.uid;
+      const today = new Date().toDateString();
+      const ref = db.ref('users/' + uid);
+
+      ref.once('value').then(snapshot => {
+        let data = snapshot.val() || { earnings: 0, tasks: {} };
+        if (data.tasks[taskId] === today) {
+          alert("You already completed this task today.");
+        } else {
+          data.tasks[taskId] = today;
+          data.earnings = (data.earnings || 0) + 2;
+          ref.set(data);
+          document.getElementById("totalEarnings").textContent = data.earnings;
+          alert("Task completed! PKR 2 added.");
+        }
+      });
+    }
+
+    function requestWithdraw() {
+      const uid = auth.currentUser.uid;
+      const ref = db.ref('users/' + uid);
+
+      ref.once('value').then(snapshot => {
+        const data = snapshot.val();
+        if (data.earnings >= 210) {
+          alert("Withdrawal requested via JazzCash/EasyPaisa.");
+          data.earnings = 0;
+          ref.set(data);
+          document.getElementById("totalEarnings").textContent = "0";
+        } else {
+          alert("You need at least PKR 210 to withdraw.");
+        }
+      });
+    }
+  </script>
+</body>
+</html>
